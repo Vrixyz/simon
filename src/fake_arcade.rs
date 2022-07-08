@@ -3,7 +3,7 @@ use bevy::{input::keyboard::KeyboardInput, prelude::*};
 use std::collections::HashMap;
 
 pub struct KeyToArcade {
-    mappings: HashMap<KeyCode, ArcadeInput>,
+    pub mappings: HashMap<KeyCode, ArcadeInput>,
 }
 
 impl Default for KeyToArcade {

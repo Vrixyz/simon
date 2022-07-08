@@ -1,15 +1,17 @@
 use bevy::prelude::*;
+use bevy_inspector_egui::Inspectable;
 
 pub struct RustArcadePlugin;
 impl Plugin for RustArcadePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<ArcadeInputEvent>()
-            .add_system(input_events_system);
+            .add_system(input_events_system)
+            .register_type::<ArcadeInput>();
     }
 }
 
 // Inputs on the arcade machine
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Reflect, Inspectable)]
 pub enum ArcadeInput {
     JoyUp,
     JoyDown,
