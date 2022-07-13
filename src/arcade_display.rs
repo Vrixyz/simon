@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
 use rand::prelude::*;
@@ -12,14 +14,42 @@ pub struct ArcadeDisplayPlugin;
 
 impl Plugin for ArcadeDisplayPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup)
-            .add_plugin(ParticlesPlugin)
-            .add_plugin(WorldInspectorPlugin::new())
-            .register_inspectable::<Reactable>()
-            .add_event::<InputReaction>()
-            .add_event::<ParticleExplosion>()
-            .add_system(handle_reaction_events)
-            .add_system(handle_particle_events);
+        app.add_startup_system_set(
+            SystemSet::new()
+                .with_system(load_images)
+                .with_system(load_sounds),
+        )
+        .add_startup_system_to_stage(StartupStage::PostStartup, setup)
+        .add_plugin(ParticlesPlugin)
+        .add_plugin(WorldInspectorPlugin::new())
+        .register_inspectable::<Reactable>()
+        .add_event::<InputReaction>()
+        .add_event::<ParticleExplosion>()
+        .add_system(handle_reaction_events)
+        .add_system(handle_particle_events);
+    }
+}
+
+struct ButtonImages {
+    round_button: Handle<Image>,
+    arrow: Handle<Image>,
+}
+struct ButtonSounds {
+    pub sounds: HashMap<ArcadeInput, EqAudioSource>,
+}
+
+#[derive(Eq)]
+struct EqAudioSource(pub Handle<AudioSource>);
+
+impl PartialEq for EqAudioSource {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl From<Handle<AudioSource>> for EqAudioSource {
+    fn from(h: Handle<AudioSource>) -> Self {
+        Self(h)
     }
 }
 
@@ -64,7 +94,83 @@ impl Reactable {
     }
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn load_images(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let button_images = ButtonImages {
+        round_button: asset_server.load("round_button.png"),
+        arrow: asset_server.load("arrow.png"),
+    };
+    commands.insert_resource(button_images);
+}
+
+fn load_sounds(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let sounds = ButtonSounds {
+        sounds: HashMap::from([
+            (
+                ArcadeInput::JoyUp,
+                asset_server.load("sounds/up.ogg").into(),
+            ),
+            (
+                ArcadeInput::JoyDown,
+                asset_server.load("sounds/down.ogg").into(),
+            ),
+            (
+                ArcadeInput::JoyLeft,
+                asset_server.load("sounds/left.ogg").into(),
+            ),
+            (
+                ArcadeInput::JoyRight,
+                asset_server.load("sounds/right.ogg").into(),
+            ),
+            (
+                ArcadeInput::JoyButton,
+                asset_server.load("sounds/up.ogg").into(),
+            ),
+            (
+                ArcadeInput::ButtonTop1,
+                asset_server.load("sounds/1.ogg").into(),
+            ),
+            (
+                ArcadeInput::ButtonTop2,
+                asset_server.load("sounds/2.ogg").into(),
+            ),
+            (
+                ArcadeInput::ButtonTop3,
+                asset_server.load("sounds/3.ogg").into(),
+            ),
+            (
+                ArcadeInput::ButtonTop4,
+                asset_server.load("sounds/4.ogg").into(),
+            ),
+            (
+                ArcadeInput::ButtonTop5,
+                asset_server.load("sounds/5.ogg").into(),
+            ),
+            (
+                ArcadeInput::ButtonTop6,
+                asset_server.load("sounds/6.ogg").into(),
+            ),
+            (
+                ArcadeInput::ButtonLeftSide,
+                asset_server.load("sounds/up.ogg").into(),
+            ),
+            (
+                ArcadeInput::ButtonRightSide,
+                asset_server.load("sounds/up.ogg").into(),
+            ),
+            (
+                ArcadeInput::ButtonFront1,
+                asset_server.load("sounds/up.ogg").into(),
+            ),
+            (
+                ArcadeInput::ButtonFront2,
+                asset_server.load("sounds/up.ogg").into(),
+            ),
+        ]),
+    };
+    commands.insert_resource(sounds);
+}
+
+fn setup(mut commands: Commands, images: Res<ButtonImages>) {
     let scale = 1.5f32;
     let mut cam_bundle = OrthographicCameraBundle::new_2d();
     cam_bundle.orthographic_projection.scale = scale;
@@ -120,7 +226,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     for p in positions {
         commands
             .spawn_bundle(SpriteBundle {
-                texture: asset_server.load("round_button.png"),
+                texture: images.round_button.clone(),
                 transform: Transform::from_translation(p.0.extend(layer_z)),
                 ..default()
             })
@@ -153,7 +259,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     for p in positions {
         commands
             .spawn_bundle(SpriteBundle {
-                texture: asset_server.load("arrow.png"),
+                texture: images.arrow.clone(),
                 transform: Transform::from_translation(p.0.extend(layer_z))
                     .with_rotation(Quat::from_axis_angle((0f32, 0f32, 1f32).into(), p.1)),
                 ..default()
@@ -164,7 +270,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 fn handle_reaction_events(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    images: Res<ButtonImages>,
+    sounds: Res<ButtonSounds>,
+    audio: Res<Audio>,
     time: Res<Time>,
     mut reactions: EventReader<InputReaction>,
     mut particles: EventWriter<ParticleExplosion>,
@@ -180,6 +288,9 @@ fn handle_reaction_events(
             FeedbackType::Menu => (Color::FUCHSIA, 20f32),
         };
         info!("event: {:?}", ev);
+        if ev.feedback != FeedbackType::Cheat {
+            audio.play(sounds.sounds[&ev.key].0.clone());
+        }
         for (t, r) in q_reactables.iter() {
             if r.key != ev.key {
                 continue;
@@ -188,17 +299,17 @@ fn handle_reaction_events(
                 location: t.translation.xy(),
                 color,
             };
-            let sprite_to_load = match r.key {
+            let image_handle = match r.key {
                 ArcadeInput::JoyRight
                 | ArcadeInput::JoyDown
                 | ArcadeInput::JoyLeft
-                | ArcadeInput::JoyUp => "arrow.png",
-                _ => "round_button.png",
+                | ArcadeInput::JoyUp => images.arrow.clone(),
+                _ => images.round_button.clone(),
             };
             commands
                 .spawn_bundle(SpriteBundle {
                     sprite: Sprite { color, ..default() },
-                    texture: asset_server.load(sprite_to_load),
+                    texture: image_handle,
                     transform: Transform::from_translation(t.translation.xy().extend(layer))
                         .with_rotation(t.rotation),
                     ..default()

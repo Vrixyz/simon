@@ -12,7 +12,7 @@ impl Plugin for RustArcadePlugin {
 }
 
 // Inputs on the arcade machine
-#[derive(Debug, Clone, PartialEq, Reflect, Inspectable, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Reflect, Inspectable, Serialize, Deserialize)]
 pub enum ArcadeInput {
     JoyUp,
     JoyDown,

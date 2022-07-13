@@ -2,9 +2,11 @@ mod arcade_display;
 mod bevy_rust_arcade;
 mod fake_arcade;
 pub mod particles;
+pub mod progress;
+pub mod simon_progress;
 
 use std::{
-    fs,
+    fs::{self, OpenOptions},
     io::{BufReader, Write},
     path::Path,
 };
@@ -19,6 +21,8 @@ use bevy::{
 };
 use bevy_rust_arcade::{ArcadeInput, ArcadeInputEvent, RustArcadePlugin};
 use fake_arcade::KeyToArcade;
+use progress::ProgressPlugin;
+use simon_progress::SimonProgressPlugin;
 
 #[derive(Default)]
 struct UserSequence {
@@ -40,6 +44,11 @@ enum CheatState {
     ShowNextPlay(ShowNextPlay),
 }
 
+struct ResetState {
+    pub start_time: f32,
+    pub seconds_before_reset: f32,
+}
+
 struct SequenceFileToLoad(pub Option<String>);
 
 fn main() {
@@ -56,9 +65,12 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(ArcadeDisplayPlugin)
         .add_plugin(RustArcadePlugin)
+        .add_plugin(ProgressPlugin)
+        .add_plugin(SimonProgressPlugin)
         .insert_resource(KeyToArcade::default())
         .insert_resource(UserSequence::default())
         .insert_resource(UserProgress::default())
+        .insert_resource(None as Option<ResetState>)
         .insert_resource(SequenceFileToLoad(Some("./current.json".into())))
         .add_startup_system(load_sequence)
         .add_system(arcade_event_system)
@@ -94,6 +106,7 @@ fn load_sequence(mut fileToLoad: ResMut<SequenceFileToLoad>, mut sequence: ResMu
 fn arcade_event_system(
     mut exit: EventWriter<AppExit>,
     mut cheat_state: ResMut<CheatState>,
+    mut reset_state: ResMut<Option<ResetState>>,
     time: Res<Time>,
     mut arcade_input_events: EventReader<ArcadeInputEvent>,
     mut feedback_events: EventWriter<InputReaction>,
@@ -101,9 +114,39 @@ fn arcade_event_system(
     mut progress: ResMut<UserProgress>,
 ) {
     for event in arcade_input_events.iter() {
+        const reset_button: ArcadeInput = ArcadeInput::ButtonFront2;
+        if event.value == 0f32 && event.arcade_input == reset_button {
+            *reset_state = None;
+            return;
+        }
         if event.value == 1f32 {
             match event.arcade_input {
                 ArcadeInput::ButtonLeftSide => {
+                    feedback_events.send(InputReaction {
+                        key: event.arcade_input.clone(),
+                        feedback: arcade_display::FeedbackType::Menu,
+                    });
+                    info!("will write");
+                    if let Ok(json_content) = serde_json::to_string(&sequence.sequence) {
+                        info!("continue to file write");
+                        let file_path = Path::new("./current.json");
+                        match if file_path.exists() {
+                            OpenOptions::new().write(true).open(file_path)
+                        } else {
+                            fs::File::create(file_path)
+                        } {
+                            Ok(mut file) => {
+                                info!("writing to current.json");
+                                file.write_all(json_content.as_bytes()).unwrap();
+                            }
+                            Err(_) => todo!(),
+                        }
+                    }
+                    // TODO: quit after delay
+                    exit.send(AppExit);
+                    return;
+                }
+                reset_button => {
                     feedback_events.send(InputReaction {
                         key: event.arcade_input.clone(),
                         feedback: arcade_display::FeedbackType::Menu,
