@@ -24,7 +24,7 @@ impl Default for KeyToArcade {
                 (KeyCode::LControl, ArcadeInput::ButtonLeftSide),
                 (KeyCode::RControl, ArcadeInput::ButtonRightSide),
                 (KeyCode::LAlt, ArcadeInput::ButtonFront1),
-                (KeyCode::RAlt, ArcadeInput::ButtonFront2),
+                (KeyCode::Space, ArcadeInput::ButtonFront2),
             ]),
         }
     }

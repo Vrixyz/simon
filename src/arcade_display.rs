@@ -21,8 +21,8 @@ impl Plugin for ArcadeDisplayPlugin {
         )
         .add_startup_system_to_stage(StartupStage::PostStartup, setup)
         .add_plugin(ParticlesPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
-        .register_inspectable::<Reactable>()
+        //.add_plugin(WorldInspectorPlugin::new())
+        //.register_inspectable::<Reactable>()
         .add_event::<InputReaction>()
         .add_event::<ParticleExplosion>()
         .add_system(handle_reaction_events)
@@ -61,6 +61,7 @@ pub enum FeedbackType {
     New,
     Cheat,
     Menu,
+    Fun,
 }
 
 #[derive(Debug)]
@@ -170,7 +171,7 @@ fn load_sounds(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(sounds);
 }
 
-fn setup(mut commands: Commands, images: Res<ButtonImages>) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>, images: Res<ButtonImages>) {
     let scale = 1.5f32;
     let mut cam_bundle = OrthographicCameraBundle::new_2d();
     cam_bundle.orthographic_projection.scale = scale;
@@ -202,6 +203,13 @@ fn setup(mut commands: Commands, images: Res<ButtonImages>) {
             Reactable::new(ArcadeInput::JoyButton),
         ),
     ];
+
+    let texts = vec![
+        ("Quit", TAU * -0.25f32),
+        ("Fun", 0f32),
+        ("Reset", 0f32),
+        ("Cheat", TAU * 0.25f32),
+    ];
     let joy_buttons = vec![
         ArcadeInput::ButtonTop1,
         ArcadeInput::ButtonTop2,
@@ -223,7 +231,28 @@ fn setup(mut commands: Commands, images: Res<ButtonImages>) {
         }
     }
 
-    for p in positions {
+    let font = asset_server.load("fonts/FiraSans-Bold.ttf");
+    let text_style = TextStyle {
+        font,
+        font_size: 60.0,
+        color: Color::BLACK,
+    };
+    let text_alignment = TextAlignment {
+        vertical: VerticalAlign::Bottom,
+        horizontal: HorizontalAlign::Center,
+    };
+    for (i, p) in positions.into_iter().enumerate() {
+        if i < texts.len() {
+            commands.spawn_bundle(Text2dBundle {
+                text: Text::with_section(texts[i].0, text_style.clone(), text_alignment),
+                text_2d_size: bevy::text::Text2dSize {
+                    size: Size::new(0f32, 400f32),
+                },
+                transform: Transform::from_translation(p.0.extend(layer_z + 50f32))
+                    .with_rotation(Quat::from_rotation_z(texts[i].1)),
+                ..default()
+            });
+        }
         commands
             .spawn_bundle(SpriteBundle {
                 texture: images.round_button.clone(),
@@ -261,7 +290,7 @@ fn setup(mut commands: Commands, images: Res<ButtonImages>) {
             .spawn_bundle(SpriteBundle {
                 texture: images.arrow.clone(),
                 transform: Transform::from_translation(p.0.extend(layer_z))
-                    .with_rotation(Quat::from_axis_angle((0f32, 0f32, 1f32).into(), p.1)),
+                    .with_rotation(Quat::from_rotation_z(p.1)),
                 ..default()
             })
             .insert(p.2);
@@ -286,8 +315,16 @@ fn handle_reaction_events(
             FeedbackType::New => (Color::BLUE, 20f32),
             FeedbackType::Cheat => (Color::GRAY, 19f32),
             FeedbackType::Menu => (Color::FUCHSIA, 20f32),
+            FeedbackType::Fun => (
+                Color::Hsla {
+                    hue: time.seconds_since_startup() as f32 * 30f32,
+                    saturation: 1f32,
+                    lightness: 0.5f32,
+                    alpha: 1f32,
+                },
+                20f32,
+            ),
         };
-        info!("event: {:?}", ev);
         if ev.feedback != FeedbackType::Cheat {
             audio.play(sounds.sounds[&ev.key].0.clone());
         }
@@ -317,7 +354,6 @@ fn handle_reaction_events(
                 .insert(DestroyAfter::new(
                     time.seconds_since_startup() as f32 + 0.5f32,
                 ));
-            info!("send: {:?}", particle);
             particles.send(particle);
         }
     }
@@ -329,7 +365,6 @@ fn handle_particle_events(
     mut evt_particles: EventReader<ParticleExplosion>,
 ) {
     for p in evt_particles.iter() {
-        info!("spawn particles {:?}", p);
         let time_to_die = time.seconds_since_startup() as f32 + 1f32;
         for i in 0..40 {
             let mut offset: Vec2 = rand::thread_rng().gen::<(f32, f32)>().into();

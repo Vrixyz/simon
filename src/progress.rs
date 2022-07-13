@@ -20,10 +20,11 @@ pub struct ProgressScale {
     pub progress_entity: Entity,
 }
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct ProgressTime {
     pub start_time: f32,
     pub duration: f32,
+    pub active: bool,
 }
 
 impl Plugin for ProgressPlugin {
@@ -39,6 +40,9 @@ fn update_progress(
     mut q_progress: Query<(&mut ProgressTime, &mut ProgressRatio)>,
 ) {
     for (progress, mut ratio) in q_progress.iter_mut() {
+        if !progress.active {
+            continue;
+        }
         ratio.ratio =
             (time.seconds_since_startup() as f32 - progress.start_time) / progress.duration;
     }
