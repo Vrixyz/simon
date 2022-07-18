@@ -41,7 +41,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(ProgressRatio { ratio: 0.0 })
         .insert(ProgressTime {
             start_time: 0.0,
-            duration: 3.0,
+            duration: 4.0,
             active: false,
         })
         .insert(SimonReset)

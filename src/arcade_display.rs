@@ -37,6 +37,9 @@ struct ButtonImages {
 struct ButtonSounds {
     pub sounds: HashMap<ArcadeInput, EqAudioSource>,
 }
+struct ButtonSoundsFr {
+    pub sounds: HashMap<ArcadeInput, EqAudioSource>,
+}
 
 #[derive(Eq)]
 struct EqAudioSource(pub Handle<AudioSource>);
@@ -104,71 +107,37 @@ fn load_images(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn load_sounds(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let sounds = ButtonSounds {
-        sounds: HashMap::from([
-            (
-                ArcadeInput::JoyUp,
-                asset_server.load("sounds/up.ogg").into(),
-            ),
-            (
-                ArcadeInput::JoyDown,
-                asset_server.load("sounds/down.ogg").into(),
-            ),
-            (
-                ArcadeInput::JoyLeft,
-                asset_server.load("sounds/left.ogg").into(),
-            ),
-            (
-                ArcadeInput::JoyRight,
-                asset_server.load("sounds/right.ogg").into(),
-            ),
-            (
-                ArcadeInput::JoyButton,
-                asset_server.load("sounds/up.ogg").into(),
-            ),
-            (
-                ArcadeInput::ButtonTop1,
-                asset_server.load("sounds/1.ogg").into(),
-            ),
-            (
-                ArcadeInput::ButtonTop2,
-                asset_server.load("sounds/2.ogg").into(),
-            ),
-            (
-                ArcadeInput::ButtonTop3,
-                asset_server.load("sounds/3.ogg").into(),
-            ),
-            (
-                ArcadeInput::ButtonTop4,
-                asset_server.load("sounds/4.ogg").into(),
-            ),
-            (
-                ArcadeInput::ButtonTop5,
-                asset_server.load("sounds/5.ogg").into(),
-            ),
-            (
-                ArcadeInput::ButtonTop6,
-                asset_server.load("sounds/6.ogg").into(),
-            ),
-            (
-                ArcadeInput::ButtonLeftSide,
-                asset_server.load("sounds/up.ogg").into(),
-            ),
-            (
-                ArcadeInput::ButtonRightSide,
-                asset_server.load("sounds/up.ogg").into(),
-            ),
-            (
-                ArcadeInput::ButtonFront1,
-                asset_server.load("sounds/up.ogg").into(),
-            ),
-            (
-                ArcadeInput::ButtonFront2,
-                asset_server.load("sounds/up.ogg").into(),
-            ),
-        ]),
+    let sounds_map_name = [
+        (ArcadeInput::JoyUp, "up"),
+        (ArcadeInput::JoyDown, "down"),
+        (ArcadeInput::JoyLeft, "left"),
+        (ArcadeInput::JoyRight, "right"),
+        (ArcadeInput::JoyButton, "mid"),
+        (ArcadeInput::ButtonTop1, "1"),
+        (ArcadeInput::ButtonTop2, "2"),
+        (ArcadeInput::ButtonTop3, "3"),
+        (ArcadeInput::ButtonTop4, "4"),
+        (ArcadeInput::ButtonTop5, "5"),
+        (ArcadeInput::ButtonTop6, "6"),
+        (ArcadeInput::ButtonLeftSide, "up"),
+        (ArcadeInput::ButtonRightSide, "cheat"),
+        (ArcadeInput::ButtonFront1, "fun"),
+        (ArcadeInput::ButtonFront2, "reset"),
+    ];
+    let sounds_en = ButtonSounds {
+        sounds: HashMap::from(sounds_map_name.clone().map(|(key, name)| {
+            let path = format!("{}{}{}", "sounds/", name, ".ogg");
+            (key, asset_server.load(&path).into())
+        })),
     };
-    commands.insert_resource(sounds);
+    let sounds_fr = ButtonSoundsFr {
+        sounds: HashMap::from(sounds_map_name.map(|(key, name)| {
+            let path = format!("{}{}{}", "sounds/", name, "-fr.ogg");
+            (key, asset_server.load(&path).into())
+        })),
+    };
+    commands.insert_resource(sounds_en);
+    commands.insert_resource(sounds_fr);
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, images: Res<ButtonImages>) {
@@ -301,6 +270,7 @@ fn handle_reaction_events(
     mut commands: Commands,
     images: Res<ButtonImages>,
     sounds: Res<ButtonSounds>,
+    sounds_fr: Res<ButtonSoundsFr>,
     audio: Res<Audio>,
     time: Res<Time>,
     mut reactions: EventReader<InputReaction>,
@@ -326,7 +296,15 @@ fn handle_reaction_events(
             ),
         };
         if ev.feedback != FeedbackType::Cheat {
-            audio.play(sounds.sounds[&ev.key].0.clone());
+            audio.play(
+                if ev.feedback == FeedbackType::Bad {
+                    &sounds_fr.sounds
+                } else {
+                    &sounds.sounds
+                }[&ev.key]
+                    .0
+                    .clone(),
+            );
         }
         for (t, r) in q_reactables.iter() {
             if r.key != ev.key {
