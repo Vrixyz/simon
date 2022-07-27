@@ -55,7 +55,7 @@ fn main() {
             width: 1280f32,
             height: 1024f32,
             present_mode: PresentMode::Fifo,
-            mode: WindowMode::Fullscreen,
+            mode: WindowMode::SizedFullscreen,
             ..default()
         })
         .insert_resource(CheatState::Disabled)
