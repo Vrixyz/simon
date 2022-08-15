@@ -1,8 +1,3 @@
-mod arcade_display;
-mod bevy_rust_arcade;
-mod fake_arcade;
-pub mod particles;
-pub mod progress;
 pub mod simon_progress;
 pub mod simon_reset;
 
@@ -12,17 +7,18 @@ use std::{
     path::Path,
 };
 
-use arcade_display::{ArcadeDisplayPlugin, InputReaction};
 use bevy::{
     app::AppExit,
-    input::keyboard::KeyboardInput,
     prelude::*,
-    reflect::erased_serde::private::serde::Deserializer,
     window::{PresentMode, WindowMode},
 };
-use bevy_rust_arcade::{ArcadeInput, ArcadeInputEvent, RustArcadePlugin};
-use fake_arcade::KeyToArcade;
 use progress::ProgressPlugin;
+use rust_arcade::fake_arcade::KeyToArcade;
+use rust_arcade::{
+    bevy_rust_arcade::{ArcadeInput, ArcadeInputEvent, RustArcadePlugin},
+    fake_arcade,
+};
+use rust_arcade_display::{ArcadeDisplayPlugin, InputReaction};
 use simon_progress::SimonProgressPlugin;
 use simon_reset::{ResetState, SimonResetPlugin};
 
@@ -55,7 +51,7 @@ fn main() {
             width: 1280f32,
             height: 1024f32,
             present_mode: PresentMode::Fifo,
-            mode: WindowMode::SizedFullscreen,
+            mode: WindowMode::Windowed,
             ..default()
         })
         .insert_resource(CheatState::Disabled)
@@ -123,14 +119,14 @@ fn arcade_event_system(
                 ArcadeInput::ButtonFront1 => {
                     feedback_events.send(InputReaction {
                         key: event.arcade_input.clone(),
-                        feedback: arcade_display::FeedbackType::Fun,
+                        feedback: rust_arcade_display::FeedbackType::Fun,
                     });
                     return;
                 }
                 ArcadeInput::ButtonLeftSide => {
                     feedback_events.send(InputReaction {
                         key: event.arcade_input.clone(),
-                        feedback: arcade_display::FeedbackType::Menu,
+                        feedback: rust_arcade_display::FeedbackType::Menu,
                     });
                     if let Ok(json_content) = serde_json::to_string(&sequence.sequence) {
                         let file_path = Path::new("./current.json");
@@ -153,14 +149,14 @@ fn arcade_event_system(
                     if reset_state.0 {
                         feedback_events.send(InputReaction {
                             key: event.arcade_input.clone(),
-                            feedback: arcade_display::FeedbackType::Cheat,
+                            feedback: rust_arcade_display::FeedbackType::Cheat,
                         });
                         return;
                     }
                     reset_state.0 = true;
                     feedback_events.send(InputReaction {
                         key: event.arcade_input.clone(),
-                        feedback: arcade_display::FeedbackType::Menu,
+                        feedback: rust_arcade_display::FeedbackType::Menu,
                     });
                     return;
                 }
@@ -174,7 +170,7 @@ fn arcade_event_system(
                     };
                     feedback_events.send(InputReaction {
                         key: event.arcade_input.clone(),
-                        feedback: arcade_display::FeedbackType::Menu,
+                        feedback: rust_arcade_display::FeedbackType::Menu,
                     });
                     return;
                 }
@@ -192,7 +188,7 @@ fn arcade_event_system(
                 progress.index = 0;
                 feedback_events.send(InputReaction {
                     key: event.arcade_input.clone(),
-                    feedback: arcade_display::FeedbackType::New,
+                    feedback: rust_arcade_display::FeedbackType::New,
                 });
                 return;
             }
@@ -203,15 +199,15 @@ fn arcade_event_system(
                 feedback_events.send(InputReaction {
                     key: event.arcade_input.clone(),
                     feedback: if progress.index == sequence.sequence.len() {
-                        arcade_display::FeedbackType::Last
+                        rust_arcade_display::FeedbackType::Last
                     } else {
-                        arcade_display::FeedbackType::Good
+                        rust_arcade_display::FeedbackType::Good
                     },
                 });
             } else {
                 feedback_events.send(InputReaction {
                     key: sequence.sequence[progress.index].clone(),
-                    feedback: arcade_display::FeedbackType::Cheat,
+                    feedback: rust_arcade_display::FeedbackType::Cheat,
                 });
                 progress.index = 0;
                 info!(
@@ -222,7 +218,7 @@ fn arcade_event_system(
                 );
                 feedback_events.send(InputReaction {
                     key: event.arcade_input.clone(),
-                    feedback: arcade_display::FeedbackType::Bad,
+                    feedback: rust_arcade_display::FeedbackType::Bad,
                 });
             }
         }
@@ -244,7 +240,7 @@ fn update_cheat_display_next(
         if show_next_play.next_play <= current_time {
             feedback_events.send(InputReaction {
                 key: sequence.sequence[progress.index].clone(),
-                feedback: arcade_display::FeedbackType::Cheat,
+                feedback: rust_arcade_display::FeedbackType::Cheat,
             });
             show_next_play.next_play = current_time + show_next_play.delta_between_displays;
         }

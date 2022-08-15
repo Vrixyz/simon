@@ -1,13 +1,9 @@
 use std::collections::HashMap;
 
 use bevy::{math::Vec3Swizzles, prelude::*};
-use bevy_inspector_egui::{Inspectable, RegisterInspectable, WorldInspectorPlugin};
-use rand::prelude::*;
 
-use crate::{
-    bevy_rust_arcade::ArcadeInput,
-    particles::{DestroyAfter, ParticlesPlugin, Velocity},
-};
+use particles::{DestroyAfter, ParticleExplosion, ParticlesPlugin, Velocity};
+use rust_arcade::bevy_rust_arcade::ArcadeInput;
 
 #[derive(Default)]
 pub struct ArcadeDisplayPlugin;
@@ -21,12 +17,8 @@ impl Plugin for ArcadeDisplayPlugin {
         )
         .add_startup_system_to_stage(StartupStage::PostStartup, setup)
         .add_plugin(ParticlesPlugin)
-        //.add_plugin(WorldInspectorPlugin::new())
-        //.register_inspectable::<Reactable>()
         .add_event::<InputReaction>()
-        .add_event::<ParticleExplosion>()
-        .add_system(handle_reaction_events)
-        .add_system(handle_particle_events);
+        .add_system(handle_reaction_events);
     }
 }
 
@@ -73,13 +65,7 @@ pub struct InputReaction {
     pub feedback: FeedbackType,
 }
 
-#[derive(Debug)]
-pub struct ParticleExplosion {
-    pub location: Vec2,
-    pub color: Color,
-}
-
-#[derive(Component, Inspectable)]
+#[derive(Component)]
 pub struct Reactable {
     pub key: ArcadeInput,
 }
@@ -333,33 +319,6 @@ fn handle_reaction_events(
                     time.seconds_since_startup() as f32 + 0.5f32,
                 ));
             particles.send(particle);
-        }
-    }
-}
-
-fn handle_particle_events(
-    mut commands: Commands,
-    time: Res<Time>,
-    mut evt_particles: EventReader<ParticleExplosion>,
-) {
-    for p in evt_particles.iter() {
-        let time_to_die = time.seconds_since_startup() as f32 + 1f32;
-        for i in 0..40 {
-            let mut offset: Vec2 = rand::thread_rng().gen::<(f32, f32)>().into();
-            offset -= Vec2::new(0.5f32, 0.5f32);
-            let position = p.location + (offset * 50f32);
-            commands
-                .spawn_bundle(SpriteBundle {
-                    sprite: Sprite {
-                        color: p.color,
-                        custom_size: Some(Vec2::splat(50f32)),
-                        ..default()
-                    },
-                    transform: Transform::from_translation(position.extend(1f32)),
-                    ..default()
-                })
-                .insert(Velocity(offset * 2000f32))
-                .insert(DestroyAfter::new(time_to_die));
         }
     }
 }

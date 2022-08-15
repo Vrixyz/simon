@@ -4,7 +4,7 @@ pub struct ProgressPlugin;
 
 #[derive(Component)]
 pub struct ProgressRatio {
-    /// From 0 to 1
+    /// Usually from 0 to 1
     pub ratio: f32,
 }
 

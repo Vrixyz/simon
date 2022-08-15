@@ -1,9 +1,7 @@
 use bevy::prelude::*;
+use progress::{ProgressRatio, ProgressScale, ProgressText};
 
-use crate::{
-    progress::{ProgressRatio, ProgressScale, ProgressText},
-    UserProgress, UserSequence,
-};
+use crate::{UserProgress, UserSequence};
 
 pub struct SimonProgressPlugin;
 

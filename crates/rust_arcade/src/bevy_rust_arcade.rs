@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_inspector_egui::Inspectable;
 use serde::{Deserialize, Serialize};
 
 pub struct RustArcadePlugin;
@@ -12,7 +11,7 @@ impl Plugin for RustArcadePlugin {
 }
 
 // Inputs on the arcade machine
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Reflect, Inspectable, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Reflect, Serialize, Deserialize)]
 pub enum ArcadeInput {
     JoyUp,
     JoyDown,

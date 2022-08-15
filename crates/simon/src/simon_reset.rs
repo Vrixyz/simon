@@ -1,11 +1,9 @@
 use std::{fs, path::Path};
 
 use bevy::prelude::*;
+use progress::*;
 
-use crate::{
-    progress::{ProgressRatio, ProgressScale, ProgressTime},
-    UserProgress, UserSequence,
-};
+use crate::{UserProgress, UserSequence};
 
 pub struct SimonResetPlugin;
 
